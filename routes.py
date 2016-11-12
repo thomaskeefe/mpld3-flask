@@ -1,4 +1,7 @@
-from flask import Flask, render_template, json, request
+from flask import Flask, render_template
+from flask_wtf import FlaskForm
+from wtforms import RadioField
+
 import numpy as np
 
 import matplotlib
@@ -57,21 +60,28 @@ def draw_fig(fig_type):
             ax.plot(x, y)
             ax.fill_between(x, 0, y, alpha=0.2)
 
-    
+
     return mpld3.fig_to_html(fig)
 
 app = Flask(__name__)
+app.secret_key = "foo"
 
+class ChartTypeForm(FlaskForm):
+    choices = [('line', 'Line'), ('bar', 'Bar'), ('pie', 'Pie'), ('scatter', 'Scatter'), ('hist', 'Histogram'), ('area', 'Area')]
+    chart_type = RadioField('Chart Type', choices=choices)
 
-@app.route('/')
+@app.route('/', methods=["GET", "POST"])
 def home():
-    return render_template('index.html')
+    form = ChartTypeForm()
+
+    if form.is_submitted():
+        chart_choice = form.chart_type.data
+        plot_html = draw_fig(chart_choice)
+        return render_template('index.html', form=form, plot=plot_html)
+
+    return render_template('index.html', form=form)
 
 
-@app.route('/query', methods=['POST'])
-def query():
-    data = json.loads(request.data)
-    return draw_fig(data["plot_type"])
 
 
 if __name__ == '__main__':
